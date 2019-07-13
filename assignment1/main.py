@@ -7,6 +7,8 @@ import numpy as np
 import pickle
 
 from layer_utils import affine_relu_forward, affine_relu_backward
+from layer_utils import affine_sigmoid_forward, affine_sigmoid_backward
+from layers import affine_forward, affine_backward
 
 
 def mse_loss_forward(scores, y):
@@ -39,7 +41,7 @@ class BitwiseNetwork:
         scores, cache1 = affine_relu_forward(x, self.params['W1'], self.params['b1'])
         scores, cache2 = affine_relu_forward(scores, self.params['W2'], self.params['b2'])
         scores, cache3 = affine_relu_forward(scores, self.params['W3'], self.params['b3'])
-        scores, cache4 = affine_relu_forward(scores, self.params['W4'], self.params['b4'])
+        scores, cache4 = affine_forward(scores, self.params['W4'], self.params['b4'])
 
         if y is None:
             return scores
@@ -48,7 +50,7 @@ class BitwiseNetwork:
 
         grads = {}
         dup = mse_loss_backward(scores, y)
-        dup, grads['W4'], grads['b4'] = affine_relu_backward(dup, cache4)
+        dup, grads['W4'], grads['b4'] = affine_backward(dup, cache4)
         dup, grads['W3'], grads['b3'] = affine_relu_backward(dup, cache3)
         dup, grads['W2'], grads['b2'] = affine_relu_backward(dup, cache2)
         dup, grads['W1'], grads['b1'] = affine_relu_backward(dup, cache1)
@@ -108,24 +110,25 @@ SAVE = True
 LOADFILENAME = "weights_loss_8e-10.pickle"
 SAVEFILENAME = "weights.pickle"
 
-model = BitwiseNetwork(3, 500, 500, 500, 1, std=1e-2)
+model = BitwiseNetwork(3, 250, 250, 250, 1, std=1e-2)
 
 if RESUME:
     model.params = pickle.load(open(LOADFILENAME, "rb"))
 
 NUM_EPOCHS = 50000
 hyperparams = {
-    "lr": 4e-4,
+    "lr": 9e-4,
     "lr_decay": 1 - 0.000001,
     "rms_eps": 1e-8,
-    "rms_decay_rate": 0.9
+    "rms_decay_rate": 0.95
 }
 solver = RMSprop(model.params, hyperparams)
 if TRAIN:
     for epoch in range(NUM_EPOCHS):
         loss, grads = model.loss(X, y)
         print("Epoch", epoch, "| Loss", loss)
-        solver.step(loss, grads)
+        if epoch%5 == 0:
+            solver.step(loss, grads)
 
 if SAVE:
     pickle.dump(model.params, open(SAVEFILENAME, "wb"))
