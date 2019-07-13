@@ -80,10 +80,18 @@ class RMSprop:
     def __init__(self, params, hyperparams):
         self.hyper = hyperparams
         self.params = params
+        self.cache = {}
+
+        for key, value in self.params.items():
+            self.cache[key] = np.zeros_like(value)
 
     def step(self, loss, grads):
+        decay_rate = self.hyper['rms_decay_rate'] 
+        eps = self.hyper['rms_eps']
         for key in grads.keys():
-            model.params[key] = model.params[key] - self.hyper['lr']*grads[key]
+            self.cache[key] = decay_rate*self.cache[key] + (1-decay_rate)*(grads[key]**2)
+            final_grad = grads[key]/(np.sqrt(self.cache[key])+eps)
+            model.params[key] = model.params[key] - self.hyper['lr']*final_grad
 
         self.hyper['lr'] *= self.hyper['lr_decay']
 
@@ -93,8 +101,8 @@ y = np.array(y)
 print("Training data")
 print(np.hstack([X, y]))
 
-RESUME = True
-TRAIN = False
+RESUME = False
+TRAIN = True
 SAVE = True
 
 LOADFILENAME = "weights_loss_8e-10.pickle"
@@ -108,7 +116,9 @@ if RESUME:
 NUM_EPOCHS = 50000
 hyperparams = {
     "lr": 4e-4,
-    "lr_decay": 1 - 0.000001
+    "lr_decay": 1 - 0.000001,
+    "rms_eps": 1e-8,
+    "rms_decay_rate": 0.9
 }
 solver = RMSprop(model.params, hyperparams)
 if TRAIN:
